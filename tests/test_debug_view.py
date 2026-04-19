@@ -61,10 +61,10 @@ def test_build_debug_html_contains_required_columns_and_filters(tmp_path: Path):
 
 def test_run_pipeline_exports_debug_html_only_when_option_enabled(tmp_path: Path, monkeypatch):
     monkeypatch.setattr("speaker_split.run.extract_raw_blocks", lambda _epub: [])
-    monkeypatch.setattr("speaker_split.run.split_scenes", lambda _blocks: [])
+    monkeypatch.setattr("speaker_split.run.split_scenes", lambda _blocks, **_kwargs: [])
     monkeypatch.setattr("speaker_split.run.build_characters", lambda _units: [])
-    monkeypatch.setattr("speaker_split.run.label_units_with_llm", lambda units, _chars: units)
-    monkeypatch.setattr("speaker_split.run.resolve_consistency", lambda units: units)
+    monkeypatch.setattr("speaker_split.run.label_units_with_llm", lambda units, _chars, **_kwargs: units)
+    monkeypatch.setattr("speaker_split.run.resolve_consistency", lambda units, **_kwargs: units)
 
     out_a = tmp_path / "without"
     out_b = tmp_path / "with"

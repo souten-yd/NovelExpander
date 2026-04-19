@@ -13,6 +13,9 @@ def label_units_with_llm(
     characters: list[dict],
     max_retries: int = 3,
     llm_call: Callable[[dict], str] | None = None,
+    model: str | None = None,
+    context_prev: int = 1,
+    context_next: int = 1,
 ) -> list[dict]:
     """LLM labeler with JSON validation and unknown fallback."""
 
@@ -22,6 +25,9 @@ def label_units_with_llm(
 
     for unit in units:
         payload = {
+            "model": model,
+            "context_prev": context_prev,
+            "context_next": context_next,
             "unit_id": unit.get("unit_id"),
             "speaker": "narrator" if unit.get("pass1_label") == "narration" else "unknown",
             "confidence": 0.25,
