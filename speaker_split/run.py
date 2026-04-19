@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .candidate_builder import build_characters
 from .epub_ingest import extract_raw_blocks
-from .html_normalize import normalize_html_block
+from .html_normalize import extract_text_fields
 from .io_utils import ensure_dir, write_json, write_jsonl
 from .llm_labeler import label_units_with_llm
 from .post_resolve import resolve_consistency
@@ -19,7 +19,8 @@ def run_pipeline(epub_path: str | Path, output_dir: str | Path) -> dict:
     raw_blocks = extract_raw_blocks(epub_path)
     normalized_blocks: list[dict] = []
     for rb in raw_blocks:
-        text = normalize_html_block(rb.html)
+        extracted = extract_text_fields(rb.html)
+        text = extracted["text"]
         if not text:
             continue
         normalized_blocks.append(
@@ -27,6 +28,14 @@ def run_pipeline(epub_path: str | Path, output_dir: str | Path) -> dict:
                 "doc_id": rb.doc_id,
                 "order": rb.order,
                 "text": text,
+                "surface_text": text,
+                "text_with_ruby": extracted["text_with_ruby"],
+                "ruby_map": extracted["ruby_map"],
+                "raw_html": rb.html,
+                "source_file": rb.doc_id,
+                "source_indexes": [rb.order],
+                "tag": rb.tag,
+                "is_meta": rb.is_meta,
             }
         )
     write_jsonl(out_dir / "normalized_blocks.jsonl", normalized_blocks)

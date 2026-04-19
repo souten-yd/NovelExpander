@@ -1,0 +1,38 @@
+[
+  {
+    "doc_id": "doc_0000",
+    "order": 0,
+    "text": "第一章 はじまり",
+    "surface_text": "第一章 はじまり",
+    "raw_html": "<h1>第一章 はじまり</h1>",
+    "source_file": "doc_0000",
+    "source_indexes": [0]
+  },
+  {
+    "doc_id": "doc_0000",
+    "order": 1,
+    "text": "太郎は歩いた。",
+    "surface_text": "太郎は歩いた。",
+    "raw_html": "<p>太郎は歩いた。</p>",
+    "source_file": "doc_0000",
+    "source_indexes": [1]
+  },
+  {
+    "doc_id": "doc_0000",
+    "order": 2,
+    "text": "※ ※ ※",
+    "surface_text": "※ ※ ※",
+    "raw_html": "<hr/>",
+    "source_file": "doc_0000",
+    "source_indexes": [2]
+  },
+  {
+    "doc_id": "doc_0000",
+    "order": 3,
+    "text": "「こんにちは」彼は言った。",
+    "surface_text": "「こんにちは」彼は言った。",
+    "raw_html": "<p>「こんにちは」彼は言った。</p>",
+    "source_file": "doc_0000",
+    "source_indexes": [3]
+  }
+]
