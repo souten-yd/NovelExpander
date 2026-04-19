@@ -7,4 +7,4 @@ def test_extract_text_fields_with_ruby_in_paragraph():
 
     assert out["text"] == "彼は東京へ行く。"
     assert out["text_with_ruby"] == "彼は東京(とうきょう)へ行く。"
-    assert out["ruby_map"] == [{"base": "東京", "reading": "とうきょう"}]
+    assert out["ruby_map"] == [{"base": "東京", "rt": "とうきょう", "start": 2, "end": 4}]

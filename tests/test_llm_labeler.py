@@ -9,7 +9,7 @@ def test_retry_three_times_then_unknown_fallback():
         return "{not-json"
 
     units = [{"unit_id": "u1", "pass1_label": "dialogue", "text": "「やあ」"}]
-    characters = [{"canonical": "narrator"}, {"canonical": "unknown"}]
+    characters = [{"id": "narrator"}, {"id": "unknown"}]
     out = label_units_with_llm(units, characters, max_retries=3, llm_call=broken_llm)
 
     assert calls["n"] == 3

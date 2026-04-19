@@ -19,7 +19,7 @@ def label_units_with_llm(
 ) -> list[dict]:
     """LLM labeler with JSON validation and unknown fallback."""
 
-    known = {c["canonical"] for c in characters}
+    known = {c["id"] for c in characters}
     labeled: list[dict] = []
     caller = llm_call or _default_llm_response
 
