@@ -43,11 +43,11 @@ def test_embedded_quote_is_not_over_split():
 def test_output_fields_and_stable_ordering():
     scene = {
         "scene_id": "scene_0002",
-        "blocks": [{"text": "「A」\n\n地の文"}],
+        "blocks": [{"text": "「A」\n\n地の文", "source_indexes": [42], "source_file": "doc.xhtml", "raw_html": "<p>「A」 地の文</p>"}],
     }
     units = segment_scene_units(scene)
     assert [u["order_in_scene"] for u in units] == [0, 1]
-    assert [u["source_indexes"] for u in units] == [[0], [1]]
+    assert [u["source_indexes"] for u in units] == [[42], [42]]
 
     required = {
         "unit_id",
@@ -59,9 +59,14 @@ def test_output_fields_and_stable_ordering():
         "unit_type",
         "mode",
         "speaker",
+        "speaker_canonical_id",
         "speaker_candidates",
         "confidence",
         "evidence",
+        "alternatives",
+        "post_resolve_actions",
+        "source_file",
+        "raw_html",
         "prev_context",
         "next_context",
     }
