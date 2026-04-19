@@ -17,12 +17,12 @@ def test_retry_three_times_then_unknown_fallback():
     assert out[0]["confidence"] == 0.0
 
 
-def test_retry_strategy_and_extended_output_fields():
+def test_second_attempt_switches_to_strict_json_instruction_and_extended_output_fields():
     calls: list[dict] = []
 
     def flaky_llm(payload):
         calls.append(payload)
-        if len(calls) < 3:
+        if len(calls) < 2:
             return "{not-json"
         return (
             '{"speaker":"alice","speaker_canonical_id":"alice","confidence":0.8,'
@@ -44,12 +44,11 @@ def test_retry_strategy_and_extended_output_fields():
     characters = [{"id": "unknown"}, {"id": "alice"}, {"id": "bob"}]
     out = label_units_with_llm(units, characters, max_retries=3, llm_call=flaky_llm)
 
-    assert len(calls) == 3
-    # 1st and 2nd attempts are same prompt; 3rd is strict JSON.
-    assert calls[0]["messages"] == calls[1]["messages"]
+    assert len(calls) == 2
+    # 2nd attempt switches to strict JSON instruction.
     assert calls[0]["response_format"] is None
-    assert calls[2]["response_format"] == {"type": "json_object"}
-    assert "STRICT" in calls[2]["messages"][0]["content"]
+    assert calls[1]["response_format"] == {"type": "json_object"}
+    assert "STRICT" in calls[1]["messages"][0]["content"]
     assert out[0]["speaker"] == "alice"
     assert out[0]["speaker_canonical_id"] == "alice"
     assert out[0]["evidence"] == "context_match"
@@ -58,7 +57,7 @@ def test_retry_strategy_and_extended_output_fields():
     assert out[0]["mode"] == "utterance"
 
 
-def test_error_buckets_are_aggregated_to_run_report():
+def test_rate_limit_and_timeout_errors_are_recorded_to_run_report():
     calls = {"n": 0}
 
     def mixed_errors(_payload):

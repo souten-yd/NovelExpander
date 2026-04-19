@@ -24,6 +24,12 @@ def test_golden_counts_and_source_fields_are_preserved():
     assert len(scenes) == 2
     assert len(units) == 5
 
+    # Freeze a subset of speaker defaults from pass1(units_final互換の最小形) and ensure
+    # unknownを含んでもパイプライン形状検証は完走できる。
+    assert units[0]["speaker"] == "narrator"
+    assert units[3]["speaker"] == "unknown"
+    assert any(u["speaker"] == "unknown" for u in units)
+
     flattened = [b for s in scenes for b in s.blocks]
     assert [b["surface_text"] for b in flattened] == before_surface
     assert [b["raw_html"] for b in flattened] == before_raw

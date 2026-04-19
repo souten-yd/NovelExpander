@@ -71,3 +71,28 @@ def test_output_fields_and_stable_ordering():
         "next_context",
     }
     assert required.issubset(set(units[0].keys()))
+
+
+def test_monologue_paragraph_is_separated_from_narration():
+    scene = {"scene_id": "scene_0003", "blocks": [{"text": "（ここで諦めるわけにはいかない……）\n\n太郎は拳を握った。"}]}
+    units = segment_scene_units(scene)
+
+    assert [u["pass1_label"] for u in units] == ["monologue", "narration"]
+
+
+def test_meta_paragraph_is_separated_from_body_paragraph():
+    scene = {
+        "scene_id": "scene_0004",
+        "blocks": [{"text": "掲載情報\n\n本文", "block_type": "meta", "is_meta": True}],
+    }
+    units = segment_scene_units(scene)
+
+    assert [u["pass1_label"] for u in units] == ["meta", "meta"]
+
+
+def test_mixed_paragraph_splits_dialogue_and_nonverbal_and_narration():
+    scene = {"scene_id": "scene_0005", "blocks": [{"text": "「わかった」（うなずく）彼は去った。"}]}
+    units = segment_scene_units(scene)
+
+    assert [u["surface_text"] for u in units] == ["「わかった」", "（うなずく）彼は去った。"]
+    assert [u["pass1_label"] for u in units] == ["dialogue", "narration"]

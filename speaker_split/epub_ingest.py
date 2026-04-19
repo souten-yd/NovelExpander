@@ -21,6 +21,8 @@ class RawBlock:
 
 
 _META_PATTERN = re.compile(r"^(?:目次|奥付|まえがき|あとがき|copyright|contents?)$", re.IGNORECASE)
+_META_URL_PATTERN = re.compile(r"^(?:https?://|www\.)", re.IGNORECASE)
+_META_PUBLISHING_PATTERN = re.compile(r"(?:発行|発刊|初版|版|掲載情報)")
 
 
 def _strip_tags(html: str) -> str:
@@ -30,7 +32,14 @@ def _strip_tags(html: str) -> str:
 
 
 def is_meta_text(tag: str, text: str) -> bool:
-    if tag.lower() in {"h1", "h2", "h3"} and _META_PATTERN.match(text.strip()):
+    normalized = text.strip()
+    if tag.lower() not in {"h1", "h2", "h3"}:
+        return False
+    if _META_PATTERN.match(normalized):
+        return True
+    if _META_URL_PATTERN.match(normalized):
+        return True
+    if _META_PUBLISHING_PATTERN.search(normalized):
         return True
     return False
 
