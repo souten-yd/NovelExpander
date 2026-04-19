@@ -9,5 +9,6 @@ __all__ = [
     "llm_labeler",
     "post_resolve",
     "io_utils",
+    "debug_view",
     "run",
 ]
