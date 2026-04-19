@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 import json
+from typing import Callable
 
 
-def label_units_with_llm(units: list[dict], characters: list[dict], max_retries: int = 2) -> list[dict]:
-    """Placeholder LLM labeler with deterministic fallback.
+def _default_llm_response(payload: dict) -> str:
+    return json.dumps(payload, ensure_ascii=False)
 
-    This implementation keeps a retry/JSON-validation shape so a real LLM can be
-    wired in later without changing callers.
-    """
+
+def label_units_with_llm(
+    units: list[dict],
+    characters: list[dict],
+    max_retries: int = 3,
+    llm_call: Callable[[dict], str] | None = None,
+) -> list[dict]:
+    """LLM labeler with JSON validation and unknown fallback."""
 
     known = {c["canonical"] for c in characters}
     labeled: list[dict] = []
+    caller = llm_call or _default_llm_response
 
     for unit in units:
         payload = {
@@ -21,9 +28,9 @@ def label_units_with_llm(units: list[dict], characters: list[dict], max_retries:
         }
 
         parsed = None
-        for _ in range(max_retries + 1):
+        for _ in range(max_retries):
             try:
-                raw = json.dumps(payload, ensure_ascii=False)
+                raw = caller(payload)
                 candidate = json.loads(raw)
                 if not isinstance(candidate, dict) or "speaker" not in candidate:
                     raise ValueError("invalid json payload")

@@ -16,12 +16,23 @@ class RawBlock:
     order: int
     html: str
     text: str
+    tag: str
+    is_meta: bool
+
+
+_META_PATTERN = re.compile(r"^(?:目次|奥付|まえがき|あとがき|copyright|contents?)$", re.IGNORECASE)
 
 
 def _strip_tags(html: str) -> str:
     text = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", "", text)
     return text.strip()
+
+
+def is_meta_text(tag: str, text: str) -> bool:
+    if tag.lower() in {"h1", "h2", "h3"} and _META_PATTERN.match(text.strip()):
+        return True
+    return False
 
 
 def _resolve_opf_path(zf: zipfile.ZipFile) -> str:
@@ -85,22 +96,33 @@ def iter_spine_documents(epub_path: str | Path) -> Iterator[tuple[str, str]]:
 
 
 def extract_raw_blocks(epub_path: str | Path) -> list[RawBlock]:
-    """Extract minimally split blocks from paragraph-like tags."""
+    """Extract minimally split blocks from heading/paragraph/hr tags."""
 
     blocks: list[RawBlock] = []
-    pattern = re.compile(r"<(p|div|li|h[1-6])\b[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
+    pattern = re.compile(r"<(h1|h2|h3|p|hr)\b[^>]*>(.*?)</\1>|<(hr)\b[^>]*/?>", re.IGNORECASE | re.DOTALL)
     for doc_id, html in iter_spine_documents(epub_path):
-        # findall with group loses full match; use finditer for content
         i = 0
         for m in re.finditer(pattern, html):
+            tag = (m.group(1) or m.group(3) or "").lower()
             chunk = m.group(0)
-            text = _strip_tags(chunk)
+            text = "---" if tag == "hr" else _strip_tags(chunk)
             if not text:
                 continue
-            blocks.append(RawBlock(doc_id=doc_id, order=i, html=chunk, text=text))
+            blocks.append(
+                RawBlock(
+                    doc_id=doc_id,
+                    order=i,
+                    html=chunk,
+                    text=text,
+                    tag=tag,
+                    is_meta=is_meta_text(tag, text),
+                )
+            )
             i += 1
         if i == 0:
             text = _strip_tags(html)
             if text:
-                blocks.append(RawBlock(doc_id=doc_id, order=0, html=html, text=text))
+                blocks.append(
+                    RawBlock(doc_id=doc_id, order=0, html=html, text=text, tag="doc", is_meta=is_meta_text("doc", text))
+                )
     return blocks
