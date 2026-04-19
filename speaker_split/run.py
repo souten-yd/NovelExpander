@@ -115,6 +115,7 @@ def run_pipeline(
 
     units_pass1: list[dict] = []
     units_final: list[dict] = []
+    scene_candidates: dict[str, list[dict]] = {}
     error_count = 0
     error_scenes: list[dict] = []
 
@@ -123,11 +124,17 @@ def run_pipeline(
             pass1_units = segment_scene_units(scene)
             units_pass1.extend(pass1_units)
 
+            characters = build_characters(pass1_units)
+            scene_id = str(scene.get("scene_id") or "")
+            scene_candidates[scene_id] = characters
+            candidate_ids = [c["id"] for c in characters]
+            for u in pass1_units:
+                u["speaker_candidates"] = candidate_ids
+
             if dry_run_no_llm:
                 units_final.extend(pass1_units)
                 continue
 
-            characters = build_characters(pass1_units)
             llm_units = label_units_with_llm(
                 pass1_units,
                 characters,
@@ -149,8 +156,25 @@ def run_pipeline(
     write_jsonl(out_dir / "units_pass1.jsonl", units_pass1)
     write_jsonl(out_dir / "units_final.jsonl", units_final)
 
-    characters = build_characters(units_pass1)
+    characters_by_id: dict[str, dict] = {}
+    for candidates in scene_candidates.values():
+        for c in candidates:
+            existing = characters_by_id.get(c["id"])
+            if existing is None:
+                characters_by_id[c["id"]] = {"id": c["id"], "display_name": c["display_name"], "aliases": list(c.get("aliases", []))}
+                continue
+            merged = set(existing.get("aliases", []))
+            merged.update(c.get("aliases", []))
+            existing["aliases"] = sorted(merged)
+
+    if "narrator" not in characters_by_id:
+        characters_by_id["narrator"] = {"id": "narrator", "display_name": "narrator", "aliases": []}
+    if "unknown" not in characters_by_id:
+        characters_by_id["unknown"] = {"id": "unknown", "display_name": "unknown", "aliases": []}
+
+    characters = [characters_by_id[k] for k in sorted(characters_by_id.keys())]
     write_json(out_dir / "characters.json", characters)
+    write_json(out_dir / "scene_candidates.json", scene_candidates)
 
     report = {
         "epub_path": str(epub_path),
