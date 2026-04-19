@@ -11,9 +11,14 @@ from .llm_labeler import label_units_with_llm
 from .post_resolve import resolve_consistency
 from .scene_splitter import split_scenes
 from .unit_segmenter import segment_scene_units
+from .debug_view import write_debug_html
 
 
-def run_pipeline(epub_path: str | Path, output_dir: str | Path) -> dict:
+def run_pipeline(
+    epub_path: str | Path,
+    output_dir: str | Path,
+    export_debug_html: bool = False,
+) -> dict:
     out_dir = ensure_dir(output_dir)
 
     raw_blocks = extract_raw_blocks(epub_path)
@@ -82,6 +87,14 @@ def run_pipeline(epub_path: str | Path, output_dir: str | Path) -> dict:
         "scene_errors": error_count,
         "error_scenes": error_scenes,
     }
+
+    if export_debug_html:
+        write_debug_html(
+            out_dir / "units_final.jsonl",
+            out_dir / "scenes.jsonl",
+            out_dir / "debug_view.html",
+        )
+
     write_json(out_dir / "run_report.json", report)
     return report
 
@@ -90,9 +103,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Speaker split pipeline")
     parser.add_argument("epub_path", help="Input EPUB path")
     parser.add_argument("-o", "--output-dir", default="speaker_split_out", help="Output directory")
+    parser.add_argument(
+        "--export-debug-html",
+        action="store_true",
+        help="Generate output_dir/debug_view.html from units_final.jsonl and scenes.jsonl",
+    )
     args = parser.parse_args()
 
-    report = run_pipeline(args.epub_path, args.output_dir)
+    report = run_pipeline(
+        args.epub_path,
+        args.output_dir,
+        export_debug_html=args.export_debug_html,
+    )
     print(
         f"done scenes={report['scenes']} units_final={report['units_final']} errors={report['scene_errors']}"
     )
