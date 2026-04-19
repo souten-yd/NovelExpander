@@ -139,11 +139,11 @@ def label_units_with_llm(
 
         parsed = None
         # retry strategy:
-        # 1st fail -> retry same prompt
-        # 2nd fail -> strict JSON prompt
+        # 1st fail -> strict JSON prompt
+        # 2nd fail -> strict JSON retry
         # 3rd fail -> fallback unknown
         for attempt in range(max_retries):
-            strict_json = attempt >= 2
+            strict_json = attempt >= 1
             try:
                 raw = client.call(
                     model=model,

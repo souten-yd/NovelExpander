@@ -54,3 +54,43 @@ def test_extract_h1_h2_h3_p_hr_and_meta(tmp_path):
 def test_is_meta_text():
     assert is_meta_text("h1", "目次") is True
     assert is_meta_text("h2", "第一章") is False
+
+
+def test_extract_raw_blocks_keeps_spine_order_across_documents(tmp_path):
+    epub_path = tmp_path / "spine.epub"
+    with zipfile.ZipFile(epub_path, "w") as zf:
+        zf.writestr(
+            "META-INF/container.xml",
+            """<?xml version='1.0'?>
+<container xmlns='urn:oasis:names:tc:opendocument:xmlns:container' version='1.0'>
+  <rootfiles>
+    <rootfile full-path='OPS/content.opf' media-type='application/oebps-package+xml'/>
+  </rootfiles>
+</container>
+""",
+        )
+        zf.writestr(
+            "OPS/content.opf",
+            """<?xml version='1.0' encoding='utf-8'?>
+<package xmlns='http://www.idpf.org/2007/opf' version='3.0'>
+  <manifest>
+    <item id='a' href='a.xhtml' media-type='application/xhtml+xml'/>
+    <item id='b' href='b.xhtml' media-type='application/xhtml+xml'/>
+  </manifest>
+  <spine>
+    <itemref idref='b'/>
+    <itemref idref='a'/>
+  </spine>
+</package>
+""",
+        )
+        zf.writestr("OPS/a.xhtml", "<html><body><p>A</p></body></html>")
+        zf.writestr("OPS/b.xhtml", "<html><body><p>B</p></body></html>")
+
+    blocks = extract_raw_blocks(epub_path)
+    assert [(b.doc_id, b.text) for b in blocks] == [("OPS/b.xhtml", "B"), ("OPS/a.xhtml", "A")]
+
+
+def test_is_meta_text_for_url_and_publishing_info_headings():
+    assert is_meta_text("h1", "https://example.com") is True
+    assert is_meta_text("h2", "2026年4月19日 発行") is True
