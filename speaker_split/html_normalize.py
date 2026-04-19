@@ -28,10 +28,10 @@ def extract_text_fields(html: str) -> dict:
     Returns:
       text: ruby annotations removed (surface/base text only)
       text_with_ruby: ruby annotations inlined as ``base(reading)``
-      ruby_map: list of base/reading pairs in appearance order
+      ruby_map: list of ruby spans in appearance order
     """
 
-    ruby_map: list[dict[str, str]] = []
+    ruby_pairs: list[dict[str, str]] = []
 
     def _ruby_to_text(match: re.Match[str]) -> str:
         body = match.group(1)
@@ -39,10 +39,10 @@ def extract_text_fields(html: str) -> dict:
         base = _RP_PATTERN.sub("", base)
         base = _normalize_surface_text(base)
         reading_parts = [_normalize_surface_text(x) for x in _RT_CONTENT_PATTERN.findall(body)]
-        reading = "".join([p for p in reading_parts if p])
-        if reading:
-            ruby_map.append({"base": base, "reading": reading})
-            return f"{base}({reading})"
+        rt = "".join([p for p in reading_parts if p])
+        if rt:
+            ruby_pairs.append({"base": base, "rt": rt})
+            return f"{base}({rt})"
         return base
 
     text_with_ruby = _RUBY_PATTERN.sub(_ruby_to_text, html)
@@ -56,6 +56,28 @@ def extract_text_fields(html: str) -> dict:
 
     text = _RUBY_PATTERN.sub(_ruby_to_base, html)
     text = _normalize_surface_text(text)
+
+    ruby_map: list[dict[str, str | int]] = []
+    search_pos = 0
+    for pair in ruby_pairs:
+        base = pair["base"]
+        rt = pair["rt"]
+        if not base:
+            continue
+        start = text.find(base, search_pos)
+        if start < 0:
+            start = text.find(base)
+        end = start + len(base) if start >= 0 else -1
+        if start >= 0:
+            search_pos = end
+        ruby_map.append(
+            {
+                "base": base,
+                "rt": rt,
+                "start": start,
+                "end": end,
+            }
+        )
 
     return {
         "text": text,

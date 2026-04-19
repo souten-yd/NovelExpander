@@ -82,17 +82,17 @@ def _read_spine_doc_hrefs(zf: zipfile.ZipFile, opf_path: str) -> list[str]:
 
 
 def iter_spine_documents(epub_path: str | Path) -> Iterator[tuple[str, str]]:
-    """Yield (doc_id, html) in spine order."""
+    """Yield (source_file, html) in spine order."""
 
     with zipfile.ZipFile(epub_path) as zf:
         opf_path = _resolve_opf_path(zf)
         doc_paths = _read_spine_doc_hrefs(zf, opf_path)
-        for idx, doc_path in enumerate(doc_paths):
+        for doc_path in doc_paths:
             try:
                 html = zf.read(doc_path).decode("utf-8", errors="ignore")
             except KeyError:
                 continue
-            yield f"doc_{idx:04d}", html
+            yield doc_path, html
 
 
 def extract_raw_blocks(epub_path: str | Path) -> list[RawBlock]:

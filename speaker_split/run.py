@@ -36,6 +36,17 @@ def _scene_matches_chapter_filter(scene: dict, chapter_filter: str | None) -> bo
     return False
 
 
+def _resolve_block_type(tag: str, is_meta: bool) -> str:
+    if is_meta:
+        return "meta"
+    low = tag.lower()
+    if low in {"h1", "h2", "h3"}:
+        return "heading"
+    if low == "hr":
+        return "scene_break"
+    return "paragraph"
+
+
 def run_pipeline(
     epub_path: str | Path,
     output_dir: str | Path,
@@ -58,16 +69,25 @@ def run_pipeline(
         normalized_blocks = _read_jsonl(normalized_path)
     else:
         raw_blocks = extract_raw_blocks(epub_path)
+        book_id = Path(epub_path).stem
+        current_chapter_title = ""
         normalized_blocks: list[dict] = []
-        for rb in raw_blocks:
+        for idx, rb in enumerate(raw_blocks):
             extracted = extract_text_fields(rb.html)
             text = extracted["text"]
             if not text:
                 continue
+            block_type = _resolve_block_type(rb.tag, rb.is_meta)
+            if block_type == "heading":
+                current_chapter_title = text
             normalized_blocks.append(
                 {
+                    "book_id": book_id,
+                    "index": idx,
                     "doc_id": rb.doc_id,
                     "order": rb.order,
+                    "block_type": block_type,
+                    "chapter_title": current_chapter_title,
                     "text": text,
                     "surface_text": text,
                     "text_with_ruby": extracted["text_with_ruby"],
