@@ -162,11 +162,15 @@ def segment_scene_units(scene: dict) -> list[dict]:
                         "pass1_label": unit_type,
                         "mode": "narrative" if unit_type in {"narration", "monologue", "meta"} else "utterance",
                         "speaker": "narrator" if unit_type == "narration" else "unknown",
+                        "speaker_canonical_id": "narrator" if unit_type == "narration" else "unknown",
                         "speaker_candidates": [],
                         "confidence": 0.0,
                         "evidence": "pass1_rule_based",
-                        "source_indexes": [block_index],
+                        "alternatives": [],
+                        "post_resolve_actions": [],
+                        "source_indexes": list(block.get("source_indexes") or [block_index]),
                         "source_file": block.get("source_file"),
+                        "raw_html": block.get("raw_html"),
                         "chapter_title": block.get("chapter_title"),
                     }
                 )
@@ -174,7 +178,6 @@ def segment_scene_units(scene: dict) -> list[dict]:
     for order_in_scene, unit in enumerate(units):
         unit["order_in_scene"] = order_in_scene
         unit["unit_id"] = f"{scene_id}_u{order_in_scene:04d}"
-        unit["source_indexes"] = [order_in_scene]
 
     for i, unit in enumerate(units):
         unit["prev_context"] = units[i - 1]["surface_text"] if i > 0 else ""

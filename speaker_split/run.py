@@ -47,6 +47,23 @@ def _resolve_block_type(tag: str, is_meta: bool) -> str:
     return "paragraph"
 
 
+def _validate_lineage_fields(rows: list[dict], stage: str) -> None:
+    missing: list[str] = []
+    for i, row in enumerate(rows):
+        for key in ("source_file", "source_indexes", "raw_html"):
+            if key not in row:
+                missing.append(f"{stage}[{i}].{key}:missing")
+                continue
+            value = row.get(key)
+            if key == "source_indexes" and (not isinstance(value, list) or len(value) == 0):
+                missing.append(f"{stage}[{i}].{key}:empty")
+            elif key in {"source_file", "raw_html"} and (value is None or str(value) == ""):
+                missing.append(f"{stage}[{i}].{key}:empty")
+    if missing:
+        preview = ", ".join(missing[:8])
+        raise ValueError(f"lineage validation failed ({len(missing)} issues): {preview}")
+
+
 def run_pipeline(
     epub_path: str | Path,
     output_dir: str | Path,
@@ -63,13 +80,13 @@ def run_pipeline(
     export_debug_html: bool = False,
 ) -> dict:
     out_dir = ensure_dir(output_dir)
+    book_id = Path(epub_path).stem
 
     normalized_path = out_dir / "normalized_blocks.jsonl"
     if resume and normalized_path.exists():
         normalized_blocks = _read_jsonl(normalized_path)
     else:
         raw_blocks = extract_raw_blocks(epub_path)
-        book_id = Path(epub_path).stem
         current_chapter_title = ""
         normalized_blocks: list[dict] = []
         for idx, rb in enumerate(raw_blocks):
@@ -108,6 +125,10 @@ def run_pipeline(
         scenes_obj = split_scenes(normalized_blocks, max_scene_blocks=max_scene_blocks)
         scenes = [{"scene_id": s.scene_id, "blocks": s.blocks} for s in scenes_obj]
         write_jsonl(scenes_path, scenes)
+
+    _validate_lineage_fields(normalized_blocks, "normalized_blocks")
+    scene_blocks = [b for s in scenes for b in s.get("blocks", [])]
+    _validate_lineage_fields(scene_blocks, "scenes.blocks")
 
     target_scenes = [s for s in scenes if _scene_matches_chapter_filter(s, chapter_filter)]
     if max_scenes is not None:
@@ -155,6 +176,8 @@ def run_pipeline(
                 }
             )
 
+    _validate_lineage_fields(units_pass1, "units_pass1")
+    _validate_lineage_fields(units_final, "units_final")
     write_jsonl(out_dir / "units_pass1.jsonl", units_pass1)
     write_jsonl(out_dir / "units_final.jsonl", units_final)
 
@@ -175,10 +198,20 @@ def run_pipeline(
         characters_by_id["unknown"] = {"id": "unknown", "display_name": "unknown", "aliases": []}
 
     characters = [characters_by_id[k] for k in sorted(characters_by_id.keys())]
-    write_json(out_dir / "characters.json", characters)
+    write_json(out_dir / "characters.json", {"characters": characters})
     write_json(out_dir / "scene_candidates.json", scene_candidates)
 
+    dialogue_units = sum(1 for u in units_final if str(u.get("unit_type") or u.get("pass1_label") or "") == "dialogue")
+    unknown_speakers = sum(1 for u in units_final if str(u.get("speaker") or "") == "unknown")
+
     report = {
+        "book_id": book_id,
+        "total_blocks": len(normalized_blocks),
+        "total_scenes": len(target_scenes),
+        "total_units": len(units_final),
+        "dialogue_units": dialogue_units,
+        "unknown_speakers": unknown_speakers,
+        "llm_errors": llm_errors,
         "epub_path": str(epub_path),
         "model": model,
         "normalized_blocks": len(normalized_blocks),
@@ -190,7 +223,6 @@ def run_pipeline(
         "error_scenes": error_scenes,
         "dry_run_no_llm": dry_run_no_llm,
         "resume": resume,
-        "llm_errors": llm_errors,
     }
 
     if export_debug_html:
