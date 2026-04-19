@@ -118,6 +118,7 @@ def run_pipeline(
     scene_candidates: dict[str, list[dict]] = {}
     error_count = 0
     error_scenes: list[dict] = []
+    llm_errors = {"timeout": 0, "rate_limit": 0, "invalid_json": 0, "other": 0}
 
     for scene in target_scenes:
         try:
@@ -141,6 +142,7 @@ def run_pipeline(
                 model=model,
                 context_prev=context_prev,
                 context_next=context_next,
+                run_report={"llm_errors": llm_errors},
             )
             resolved = resolve_consistency(llm_units, confidence_threshold=confidence_threshold)
             units_final.extend(resolved)
@@ -188,6 +190,7 @@ def run_pipeline(
         "error_scenes": error_scenes,
         "dry_run_no_llm": dry_run_no_llm,
         "resume": resume,
+        "llm_errors": llm_errors,
     }
 
     if export_debug_html:
