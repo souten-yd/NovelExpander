@@ -19,3 +19,50 @@ def test_nonverbal_detection():
     scene = {"scene_id": "scene_0001", "blocks": [{"text": "（うなずく）"}]}
     units = segment_scene_units(scene)
     assert units[0]["pass1_label"] == "nonverbal"
+
+
+def test_monologue_detection():
+    scene = {"scene_id": "scene_0001", "blocks": [{"text": "（どうしてこんなことに……）"}]}
+    units = segment_scene_units(scene)
+    assert units[0]["pass1_label"] == "monologue"
+
+
+def test_meta_detection():
+    scene = {"scene_id": "scene_0001", "blocks": [{"text": "目次", "is_meta": True}]}
+    units = segment_scene_units(scene)
+    assert units[0]["pass1_label"] == "meta"
+
+
+def test_embedded_quote_is_not_over_split():
+    scene = {"scene_id": "scene_0001", "blocks": [{"text": "彼は「まずい」と言った。"}]}
+    units = segment_scene_units(scene)
+    assert len(units) == 1
+    assert units[0]["surface_text"] == "彼は「まずい」と言った。"
+
+
+def test_output_fields_and_stable_ordering():
+    scene = {
+        "scene_id": "scene_0002",
+        "blocks": [{"text": "「A」\n\n地の文"}],
+    }
+    units = segment_scene_units(scene)
+    assert [u["order_in_scene"] for u in units] == [0, 1]
+    assert [u["source_indexes"] for u in units] == [[0], [1]]
+
+    required = {
+        "unit_id",
+        "scene_id",
+        "order_in_scene",
+        "source_indexes",
+        "surface_text",
+        "normalized_text",
+        "unit_type",
+        "mode",
+        "speaker",
+        "speaker_candidates",
+        "confidence",
+        "evidence",
+        "prev_context",
+        "next_context",
+    }
+    assert required.issubset(set(units[0].keys()))
