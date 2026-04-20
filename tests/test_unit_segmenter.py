@@ -96,3 +96,11 @@ def test_mixed_paragraph_splits_dialogue_and_nonverbal_and_narration():
 
     assert [u["surface_text"] for u in units] == ["「わかった」", "（うなずく）彼は去った。"]
     assert [u["pass1_label"] for u in units] == ["dialogue", "narration"]
+
+
+def test_minor_split_rejoins_leading_punctuation():
+    scene = {"scene_id": "scene_0006", "blocks": [{"text": "「こんにちは」、彼は笑った。"}]}
+    units = segment_scene_units(scene)
+
+    assert len(units) == 1
+    assert units[0]["surface_text"] == "「こんにちは」、彼は笑った。"

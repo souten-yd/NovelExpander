@@ -6,6 +6,8 @@ def test_extract_text_fields_with_ruby_in_paragraph():
     out = extract_text_fields(html)
 
     assert out["text"] == "彼は東京へ行く。"
+    assert out["surface_text"] == "彼は東京へ行く。"
+    assert out["normalized_text"] == "彼は東京へ行く。"
     assert out["text_with_ruby"] == "彼は東京(とうきょう)へ行く。"
     assert out["ruby_map"] == [{"base": "東京", "rt": "とうきょう", "start": 2, "end": 4}]
 
@@ -18,7 +20,7 @@ def test_extract_text_fields_ruby_map_start_end_with_repeated_base():
     assert out["text_with_ruby"] == "東京(とうきょう)と東京、東京(トーキョー)。"
     assert out["ruby_map"] == [
         {"base": "東京", "rt": "とうきょう", "start": 0, "end": 2},
-        {"base": "東京", "rt": "トーキョー", "start": 3, "end": 5},
+        {"base": "東京", "rt": "トーキョー", "start": 6, "end": 8},
     ]
 
 
