@@ -122,12 +122,13 @@ def run_pipeline(
         global_index = 0
         for rb in raw_blocks:
             extracted = extract_text_fields(rb.html)
-            text = extracted["text"]
-            if not text:
+            surface_text = str(extracted.get("surface_text") or extracted.get("text") or "")
+            normalized_text = str(extracted.get("normalized_text") or extracted.get("text") or "")
+            if not normalized_text:
                 continue
             block_type = _resolve_block_type(rb.tag, rb.is_meta)
             if block_type == "heading":
-                current_chapter_title = text
+                current_chapter_title = normalized_text
             normalized_blocks.append(
                 {
                     "book_id": book_id,
@@ -136,8 +137,9 @@ def run_pipeline(
                     "order": rb.order,
                     "block_type": block_type,
                     "chapter_title": current_chapter_title,
-                    "text": text,
-                    "surface_text": text,
+                    "text": normalized_text,
+                    "surface_text": surface_text,
+                    "normalized_text": normalized_text,
                     "text_with_ruby": extracted["text_with_ruby"],
                     "ruby_map": extracted["ruby_map"],
                     "raw_html": rb.html,

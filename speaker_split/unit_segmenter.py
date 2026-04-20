@@ -18,6 +18,8 @@ _NONVERBAL_ACTION_WORDS = (
     "沈黙",
     "無言",
 )
+_ATTACH_TO_PREV = "、。！？!?…」』）)]】"
+_ATTACH_TO_NEXT = "「『（([【"
 
 
 def _normalize_text(text: str) -> str:
@@ -128,6 +130,31 @@ def _split_mixed_paragraph(text: str) -> list[str]:
     return chunks
 
 
+def _rejoin_minor_splits(chunks: list[str]) -> list[str]:
+    if not chunks:
+        return []
+
+    merged: list[str] = [chunks[0]]
+    for chunk in chunks[1:]:
+        if not chunk:
+            continue
+        prev = merged[-1]
+        if not prev:
+            merged[-1] = chunk
+            continue
+
+        should_attach_prev = (
+            bool(re.fullmatch(r"[、。！？!?…]+", chunk))
+            or chunk[0] in _ATTACH_TO_PREV
+            or prev[-1] in _ATTACH_TO_NEXT
+        )
+        if should_attach_prev:
+            merged[-1] = prev + chunk
+            continue
+        merged.append(chunk)
+    return merged
+
+
 def _label_unit(chunk: str, block: dict) -> str:
     if _is_meta(chunk, block):
         return "meta"
@@ -151,7 +178,8 @@ def segment_scene_units(scene: dict) -> list[dict]:
 
         paragraphs = [p.strip() for p in re.split(r"\n{2,}", raw_text) if p.strip()]
         for para in paragraphs:
-            for chunk in _split_mixed_paragraph(para):
+            chunks = _rejoin_minor_splits(_split_mixed_paragraph(para))
+            for chunk in chunks:
                 unit_type = _label_unit(chunk, block)
                 units.append(
                     {
