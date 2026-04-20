@@ -37,6 +37,7 @@ def _scene_matches_chapter_filter(scene: dict, chapter_filter: str | None) -> bo
 
 
 def _resolve_block_type(tag: str, is_meta: bool) -> str:
+    """Normalize raw tag/meta flags into canonical block types."""
     if is_meta:
         return "meta"
     low = tag.lower()
@@ -64,6 +65,35 @@ def _validate_lineage_fields(rows: list[dict], stage: str) -> None:
         raise ValueError(f"lineage validation failed ({len(missing)} issues): {preview}")
 
 
+def _validate_normalized_required_fields(rows: list[dict]) -> None:
+    required = (
+        "book_id",
+        "index",
+        "block_type",
+        "chapter_title",
+        "text",
+        "text_with_ruby",
+        "ruby_map",
+        "raw_html",
+        "source_file",
+    )
+    missing: list[str] = []
+    for i, row in enumerate(rows):
+        for key in required:
+            if key not in row:
+                missing.append(f"normalized_blocks[{i}].{key}:missing")
+                continue
+            value = row.get(key)
+            if value is None:
+                missing.append(f"normalized_blocks[{i}].{key}:empty")
+                continue
+            if key in {"book_id", "text", "raw_html", "source_file"} and isinstance(value, str) and value == "":
+                missing.append(f"normalized_blocks[{i}].{key}:empty")
+    if missing:
+        preview = ", ".join(missing[:8])
+        raise ValueError(f"normalized required field validation failed ({len(missing)} issues): {preview}")
+
+
 def run_pipeline(
     epub_path: str | Path,
     output_dir: str | Path,
@@ -89,7 +119,8 @@ def run_pipeline(
         raw_blocks = extract_raw_blocks(epub_path)
         current_chapter_title = ""
         normalized_blocks: list[dict] = []
-        for idx, rb in enumerate(raw_blocks):
+        global_index = 0
+        for rb in raw_blocks:
             extracted = extract_text_fields(rb.html)
             text = extracted["text"]
             if not text:
@@ -100,7 +131,7 @@ def run_pipeline(
             normalized_blocks.append(
                 {
                     "book_id": book_id,
-                    "index": idx,
+                    "index": global_index,
                     "doc_id": rb.doc_id,
                     "order": rb.order,
                     "block_type": block_type,
@@ -111,11 +142,12 @@ def run_pipeline(
                     "ruby_map": extracted["ruby_map"],
                     "raw_html": rb.html,
                     "source_file": rb.doc_id,
-                    "source_indexes": [rb.order],
+                    "source_indexes": [global_index],
                     "tag": rb.tag,
                     "is_meta": rb.is_meta,
                 }
             )
+            global_index += 1
         write_jsonl(normalized_path, normalized_blocks)
 
     scenes_path = out_dir / "scenes.jsonl"
@@ -127,6 +159,7 @@ def run_pipeline(
         write_jsonl(scenes_path, scenes)
 
     _validate_lineage_fields(normalized_blocks, "normalized_blocks")
+    _validate_normalized_required_fields(normalized_blocks)
     scene_blocks = [b for s in scenes for b in s.get("blocks", [])]
     _validate_lineage_fields(scene_blocks, "scenes.blocks")
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Iterator
 import re
 import zipfile
@@ -72,11 +72,7 @@ def _read_spine_doc_hrefs(zf: zipfile.ZipFile, opf_path: str) -> list[str]:
         if item_id and href and ("html" in media_type or href.endswith((".xhtml", ".html", ".htm"))):
             id_to_href[item_id] = href
 
-    base = str(Path(opf_path).parent)
-    if base == ".":
-        base = ""
-    else:
-        base = f"{base}/"
+    base_dir = PurePosixPath(opf_path).parent
 
     ordered_docs: list[str] = []
     for itemref in spine.findall("{*}itemref"):
@@ -86,7 +82,11 @@ def _read_spine_doc_hrefs(zf: zipfile.ZipFile, opf_path: str) -> list[str]:
         href = id_to_href.get(item_idref)
         if not href:
             continue
-        ordered_docs.append(f"{base}{href}")
+        href_path = href.split("#", 1)[0]
+        resolved = PurePosixPath(href_path)
+        if not resolved.is_absolute():
+            resolved = base_dir / resolved
+        ordered_docs.append(str(resolved))
     return ordered_docs
 
 
